@@ -45,6 +45,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.io.IOUtils;
 import org.pytorch.serve.servingsdk.snapshot.SnapshotSerializer;
 import org.pytorch.serve.snapshot.SnapshotSerializerFactory;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public final class ConfigManager {
@@ -92,7 +93,7 @@ public final class ConfigManager {
     private static final String TS_MODEL_SERVER_HOME = "model_server_home";
     private static final String TS_MODEL_STORE = "model_store";
     private static final String TS_PREFER_DIRECT_BUFFER = "prefer_direct_buffer";
-    private static final String TS_ALLOWED_URLS = "allowed_urls";
+    static final String TS_ALLOWED_URLS = "allowed_urls";
     private static final String TS_INSTALL_PY_DEP_PER_MODEL = "install_py_dep_per_model";
     private static final String TS_ENABLE_METRICS_API = "enable_metrics_api";
     private static final String TS_GRPC_INFERENCE_PORT = "grpc_inference_port";
@@ -110,6 +111,8 @@ public final class ConfigManager {
     private static final String MODEL_SNAPSHOT = "model_snapshot";
     private static final String MODEL_CONFIG = "models";
     private static final String VERSION = "version";
+    
+    private static final String DEFAULT_TS_ALLOWED_URLS = "file://.*|http(s)?://.*";
 
     // Variables which are local
     public static final String MODEL_METRICS_LOGGER = "MODEL_METRICS";
@@ -136,8 +139,21 @@ public final class ConfigManager {
     private String hostName;
     private Map<String, Map<String, JsonObject>> modelConfig = new HashMap<>();
     private String torchrunLogDir;
+    
+    private Logger logger = LoggerFactory.getLogger(ConfigManager.class);
 
-    private ConfigManager(Arguments args) throws IOException {
+    public static String getDefaultTsAllowedUrls(){
+        return DEFAULT_TS_ALLOWED_URLS;
+    }
+
+    public Properties getProp(){
+        return prop;
+    }
+    public Logger getLogger(){
+        return logger;
+    }
+
+    ConfigManager(Arguments args) throws IOException {
         prop = new Properties();
 
         this.snapshotDisabled = args.isSnapshotDisabled();
@@ -234,6 +250,10 @@ public final class ConfigManager {
         }
 
         setModelConfig();
+        
+        if(prop.getProperty(TS_ALLOWED_URLS, DEFAULT_TS_ALLOWED_URLS) == DEFAULT_TS_ALLOWED_URLS){
+            logger.warn("YOUR torchserve instance can access any URLto load models."+ "When deploying to production, make sure to limit the set of allowed URLs in the config.properties");
+        }
     }
 
     public static String readFile(String path) throws IOException {
@@ -783,7 +803,8 @@ public final class ConfigManager {
     }
 
     public List<String> getAllowedUrls() {
-        String allowedURL = prop.getProperty(TS_ALLOWED_URLS, "file://.*|http(s)?://.*");
+        //String allowedURL = prop.getProperty(TS_ALLOWED_URLS, "file://.*|http(s)?://.*");
+        String allowedURL = prop.getProperty(TS_ALLOWED_URLS, DEFAULT_TS_ALLOWED_URLS);
         return Arrays.asList(allowedURL.split(","));
     }
 
