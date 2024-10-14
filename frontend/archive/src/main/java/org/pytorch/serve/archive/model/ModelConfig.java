@@ -233,7 +233,7 @@ public class ModelConfig {
         this.deviceIds = new ArrayList<>();
         for (int i = 0; i < deviceIds.size(); i++) {
             if (deviceIds.get(i) instanceof Integer) {
-                this.deviceIds.add((int) deviceIds.get(i));
+                this.deviceIds.add((Integer) deviceIds.get(i));
             } else {
                 logger.warn("Invalid deviceIds:{},", deviceIds.get(i));
                 this.deviceIds = null;

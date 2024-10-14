@@ -3,9 +3,12 @@ package org.pytorch.serve.util;
 import io.netty.handler.ssl.SslContext;
 import java.io.File;
 import java.io.IOException;
+import java.io.ObjectInputFilter;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.mockito.Mockito;
 import org.pytorch.serve.TestUtils;
 import org.pytorch.serve.metrics.Dimension;
 import org.pytorch.serve.metrics.Metric;
@@ -13,6 +16,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testng.Assert;
 import org.testng.annotations.Test;
+
+import static org.testng.Assert.assertEquals;
 
 public class ConfigManagerTest {
     static {
@@ -41,7 +46,7 @@ public class ConfigManagerTest {
         ConfigManager.init(args);
         ConfigManager configManager = ConfigManager.getInstance();
         configManager.setProperty("keystore", "src/test/resources/keystore.p12");
-        Assert.assertEquals("true", configManager.getEnableEnvVarsConfig());
+        assertEquals("true", configManager.getEnableEnvVarsConfig());
 
         Dimension dimension;
         List<Metric> metrics = new ArrayList<>();
@@ -73,8 +78,26 @@ public class ConfigManagerTest {
         args.setSnapshotDisabled(true);
         ConfigManager.init(args);
         ConfigManager configManager = ConfigManager.getInstance();
-        Assert.assertEquals("false", configManager.getEnableEnvVarsConfig());
-        Assert.assertEquals(4, configManager.getJsonIntValue("noop", "1.0", "batchSize", 1));
-        Assert.assertEquals(4, configManager.getJsonIntValue("vgg16", "1.0", "maxWorkers", 1));
+        assertEquals("false", configManager.getEnableEnvVarsConfig());
+        assertEquals(4, configManager.getJsonIntValue("noop", "1.0", "batchSize", 1));
+        assertEquals(4, configManager.getJsonIntValue("vgg16", "1.0", "maxWorkers", 1));
     }
+
+    @Test
+    void testWarnOnDefaultAllowedUrls() throws IOException {
+        ConfigManager configManager = Mockito.mock(ConfigManager.class);
+        Mockito.when(configManager.getProp().getProperty(ConfigManager.getDefaultTsAllowedUrls())).thenReturn(ConfigManager.getDefaultTsAllowedUrls());
+        new ConfigManager(null);
+        Mockito.verify(configManager.getLogger(), Mockito.atLeastOnce()).warn(Mockito.anyString());
+    }
+    @Test
+    void testGetallowedUrls() throws IOException{
+        ConfigManager configManager =  Mockito.mock(ConfigManager.class);
+        String customAllowedUrls = "https://example.com,https://my-custom-server.com";
+        Mockito.when(configManager.getProp().getProperty(ConfigManager.TS_ALLOWED_URLS, ConfigManager.getDefaultTsAllowedUrls()  )).thenReturn(customAllowedUrls);
+        List<String> allowedUrls = configManager.getAllowedUrls();
+        List<String> expectedUrls = List.of(customAllowedUrls.split(","));
+        assertEquals(expectedUrls,allowedUrls);
+    }
+
 }
